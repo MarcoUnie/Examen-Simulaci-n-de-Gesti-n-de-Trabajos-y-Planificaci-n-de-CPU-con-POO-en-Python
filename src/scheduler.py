@@ -4,41 +4,61 @@ from src.proceso import Proceso
 
 GanttEntry = Tuple[str, int, int]
 
+
 class Scheduler(ABC):
     @abstractmethod
     def planificar(self, procesos: List[Proceso]) -> List[GanttEntry]:
         pass
 
+
 class FCFSScheduler(Scheduler):
     def planificar(self, procesos: List[Proceso]) -> List[GanttEntry]:
         tiempo_actual = 0
-        resultado = []
-        for p in procesos:
-            p.tiempo_inicio = tiempo_actual
-            p.tiempo_fin = tiempo_actual + p.duracion
-            resultado.append((p.pid, p.tiempo_inicio, p.tiempo_fin))
-            tiempo_actual = p.tiempo_fin
-        return resultado
+        gantt: List[GanttEntry] = []
+
+        for proceso in procesos:
+            proceso.tiempo_inicio = tiempo_actual
+            tiempo_fin = tiempo_actual + proceso.duracion
+            proceso.tiempo_fin = tiempo_fin
+            proceso.tiempo_restante = 0
+
+            gantt.append((proceso.pid, proceso.tiempo_inicio, proceso.tiempo_fin))
+            tiempo_actual = tiempo_fin
+
+        return gantt
+
 
 class RoundRobinScheduler(Scheduler):
-    def __init__(self, quantum: int):
+    def __init__(self, quantum: int = 2):
         self.quantum = quantum
 
     def planificar(self, procesos: List[Proceso]) -> List[GanttEntry]:
+        gantt: List[GanttEntry] = []
         tiempo_actual = 0
-        resultado = []
-        cola = procesos.copy()
 
-        while any(p.tiempo_restante > 0 for p in cola):
-            for p in cola:
-                if p.tiempo_restante <= 0:
-                    continue
-                if p.tiempo_inicio is None:
-                    p.tiempo_inicio = tiempo_actual
-                ejecutado = min(self.quantum, p.tiempo_restante)
-                resultado.append((p.pid, tiempo_actual, tiempo_actual + ejecutado))
-                tiempo_actual += ejecutado
-                p.tiempo_restante -= ejecutado
-                if p.tiempo_restante == 0:
-                    p.tiempo_fin = tiempo_actual
-        return resultado
+        # Inicializamos tiempo restante si no está
+        for proceso in procesos:
+            proceso.tiempo_restante = proceso.duracion
+
+        cola = procesos[:]
+        while cola:
+            proceso = cola.pop(0)
+
+            if proceso.tiempo_restante > 0:
+                if proceso.tiempo_inicio is None:
+                    proceso.tiempo_inicio = tiempo_actual
+
+                tiempo_ejecucion = min(self.quantum, proceso.tiempo_restante)
+                tiempo_fin = tiempo_actual + tiempo_ejecucion
+
+                gantt.append((proceso.pid, tiempo_actual, tiempo_fin))
+
+                proceso.tiempo_restante -= tiempo_ejecucion
+                tiempo_actual = tiempo_fin
+
+                if proceso.tiempo_restante > 0:
+                    cola.append(proceso)
+                else:
+                    proceso.tiempo_fin = tiempo_actual
+
+        return gantt
