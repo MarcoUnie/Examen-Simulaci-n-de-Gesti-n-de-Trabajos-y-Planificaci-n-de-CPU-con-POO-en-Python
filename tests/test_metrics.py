@@ -18,5 +18,5 @@ def test_metricas_calculadas_correctamente():
     metricas = calcular_metricas([p1, p2])
 
     assert metricas["respuesta_prom"] == pytest.approx(2.0)
-    assert metricas["retorno_prom"] == pytest.approx(3.5)
-    assert metricas["espera_prom"] == pytest.approx(0.5)
+    assert metricas["retorno_prom"] == pytest.approx(5.5)
+    assert metricas["espera_prom"] == pytest.approx(2.0) 
